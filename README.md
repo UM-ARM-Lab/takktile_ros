@@ -2,31 +2,26 @@
 ### ROS drivers for the TakkTile tactile array
 
 ## Setup
-1. Install TakkTile TakkFast USB drivers (see https://github.com/personalrobotics/TakkTile-usb)
 
-        This will install TakkTile.py which is a dependency ~~(currently included as a symlink -- need to fix this)~~
+1. Install TakkTile TakkFast USB drivers (see https://github.com/personalrobotics/TakkTile-usb)
+  1. This will install TakkTile.py which is a dependency ~~(currently included as a symlink -- need to fix this)~~
 
 1. Get code and compile
 
-        ```
         cd ~/catkin_workspace/src
         catkin_init_workspace
         git clone https://github.com/personalrobotics/takktile_ros.git
         cd ~/catkin_workspace/
         catkin_make
-        ```
+
 1. set USB permissions
 
-        ```
         sudo cp 71-takktile.rules /etc/udev/rules.d/
-        ```
 
 1. Run
 
-        ```
         roscore &
         rosrun takktile_ros takktile_node.py &
-        ```
 
 ## Plot
 While takktile_node.py is running:
