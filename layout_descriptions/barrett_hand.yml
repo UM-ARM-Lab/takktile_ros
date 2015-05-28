@@ -1,0 +1,6 @@
+---
+- frame_id: hand_base
+  sensor_positions: 
+    - [0, 0, 0.1]
+    - [0, 0.1, 0.1]
+  normal: [0, 0, 1]
