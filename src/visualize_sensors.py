@@ -12,8 +12,9 @@ from takktile_ros.msg import Raw
 from visualization_msgs.msg import Marker, MarkerArray
 
 # constants
-LINE_WIDTH = 0.005 # 5mm
+LINE_WIDTH = 0.002 # 5mm
 SCALE_FACTOR = (.05/500) # TODO calculate or allow as optional argument?
+MARKER_LIFETIME = rospy.Duration.from_sec(2/60)
 
 # parse args and automatically open file for reading
 arg_parser = argparse.ArgumentParser()
@@ -27,20 +28,15 @@ with args.sensor_file:
 # start node
 rospy.init_node('takktile_markers',anonymous=True)
 
-
-def pressure_generator(pressures):
-    for pressure in pressures:
-        yield pressure
-
 def publish_viz(data_msg):
     """Publish RViz Markers for TakkTile sensors relative to a set of base frame_id's"""
 
-    pressure_vals = pressure_generator(data_msg.pressure)
+    pressure_vals = iter(data_msg.pressure)
     marker_array = []
 
     for link in sensor_data:
         # TODO figure out position values for all sensors
-        for position in link['sensor_positions']:
+        for sensor in link['sensors']:
             try:
                 pressure = pressure_vals.next()
                 # marker metadata
@@ -56,12 +52,12 @@ def publish_viz(data_msg):
                 marker.scale = Vector3(x=LINE_WIDTH, y=0, z=0)
                 marker.color = ColorRGBA(r=1, g=0, b=0, a=1)
                 # 'takktile/raw' node publishes at 60hz, let markers fade if it stops publishing
-                marker.lifetime = rospy.Duration.from_sec(2/60)
+                marker.lifetime = MARKER_LIFETIME
                 marker.frame_locked = True # TODO verify this allows markers to move with moving frame
 
                 # calculate and set endpoints of line
-                marker.points.append(Point(*position)) # position of sensor, start of line p0
-                p1 = numpy.array(position) + (numpy.array(link['normal']) * pressure * SCALE_FACTOR) # vector arith for line endpoint
+                marker.points.append(Point(*sensor['position'])) # position of sensor, start of line p0
+                p1 = numpy.array(sensor['position']) + (numpy.array(sensor['normal']) * pressure * SCALE_FACTOR) # vector arith for line endpoint
                 marker.points.append(Point(*p1))
 
                 marker_array.append(marker)

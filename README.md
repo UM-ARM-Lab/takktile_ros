@@ -4,7 +4,7 @@
 ## Setup
 
 1. Install TakkTile TakkFast USB drivers (see https://github.com/personalrobotics/TakkTile-usb)
-  1. This will install TakkTile.py which is a dependency ~~(currently included as a symlink -- need to fix this)~~
+    1. This will install TakkTile.py which is a dependency ~~(currently included as a symlink -- need to fix this)~~
 
 1. Get code and compile
 
