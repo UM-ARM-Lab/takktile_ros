@@ -14,7 +14,8 @@ from visualization_msgs.msg import Marker, MarkerArray
 # constants
 LINE_WIDTH = 0.002 # 5mm
 SCALE_FACTOR = (.05/500) # TODO calculate or allow as optional argument?
-MARKER_LIFETIME = rospy.Duration.from_sec(2/60)
+#MARKER_LIFETIME = rospy.Duration.from_sec(2/60)
+MARKER_LIFETIME = rospy.Duration.from_sec(0.2) # TODO increased to eliminate flickering, fix flickering
 
 # parse args and automatically open file for reading
 arg_parser = argparse.ArgumentParser()
