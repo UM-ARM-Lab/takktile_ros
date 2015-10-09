@@ -5,7 +5,8 @@ import time
 
 
 class TakktileSubscriber(object):
-    def __init__(self, input_topic, tare_topic, callback, count=100):
+    def __init__(self, input_topic, tare_topic, callback,
+                 tare_count=100, filter_count=5):
         from collections import deque
         from threading import Condition, Lock
 
@@ -14,9 +15,11 @@ class TakktileSubscriber(object):
 
         self.input_topic = input_topic
         self.tare_topic = tare_topic
+        self.tare_count = tare_count
+        self.filter_count = filter_count
 
         self.callback = callback
-        self.queue = deque(maxlen=count)
+        self.queue = deque(maxlen=max(tare_count, filter_count))
         self.tare_offset = None
 
     def __enter__(self):
@@ -40,7 +43,7 @@ class TakktileSubscriber(object):
 
         with self.lock:
             # Wait for the queue to fill up.
-            while len(self.queue) < self.queue.maxlen:
+            while len(self.queue) < self.tare_count:
                 self.condition.wait()
 
             # Compute the tare offset.
@@ -54,16 +57,26 @@ class TakktileSubscriber(object):
 
     def data_callback(self, takktile_msg):
         with self.lock:
-            # Accumulate a buffer of data to use for tareing.
             self.queue.append(takktile_msg)
             self.condition.notify_all()
 
+            # Wait until we get enough data in the queue to filter.
+            if len(self.queue) < self.filter_count:
+                return
+            # Wait until the sensor is tared.
+            if self.tare_offset is None:
+                return
+
+            # Apply a low-pass filter to the data.
+            pressure_filter_inputs = list(self.queue)[-self.filter_count:]
+            pressure_filtered = numpy.mean(
+                [numpy.array(msg.pressure, dtype='float')
+                for msg in pressure_filter_inputs],
+                axis=0)
+
             # Apply the tare offset.
-            if self.tare_offset is not None:
-                pressure_raw = numpy.array(takktile_msg.pressure)
-                pressure_tared = pressure_raw - self.tare_offset
-            else:
-                pressure_tared = None
+            pressure_raw = numpy.array(takktile_msg.pressure)
+            pressure_tared = pressure_filtered - self.tare_offset
 
         if pressure_tared is not None:
             self.callback(takktile_msg, pressure_tared)
@@ -77,7 +90,7 @@ class TakktileSubscriber(object):
 
 
 class TakktileBinarizer(object):
-    def __init__(self, groups, callback, threshold=4.):
+    def __init__(self, groups, callback, threshold=3.):
         self.group_map = list(groups)
         self.threshold = float(threshold)
         self.all_groups = set(groups)
