@@ -49,8 +49,9 @@ import os, inspect   # used for loading conf file relative to script directory
 import numpy as np   # used for array operations
 
 from std_srvs.srv import Empty
+from std_msgs.msg import Header
 from geometry_msgs.msg import Point32
-from takktile_ros.msg import Raw, Touch, Contact, Info
+from takktile_ros.msg import Raw, Touch, Contact, Info, Alive
 
 from TakkTile import TakkTile
 from yaml import safe_load
@@ -120,9 +121,21 @@ class TakkNode:
         i = 0
         #k = 0
         while not rospy.is_shutdown():
+            # add an artificial delay to the timestamp to allow other tf information
+            # to queue, otherwise may see "extrapolate into the future" errors
+            timestamp = rospy.Time.now() - rospy.Duration(0.1) # TODO take as defaulted parameter
+            header = Header()
+            header.stamp = timestamp
             i += 1
             if i >= 100: # downsample static info
-                info_pub.publish(frame_id, xyz_map, self.alive)
+                info = Info()
+                info.header = header
+                info.frame_id = frame_id
+                info.xyz = xyz_map
+                info.sensors = []
+                for sensor in self.alive:
+                    info.sensors.append(Alive(sensor))
+                info_pub.publish(info)
                 i = 0
                 #k += 100
                 #print k
@@ -153,14 +166,14 @@ class TakkNode:
             if (TAKKARRAY_FLAG):
                 self.pressure= [self.pressure[i] for i in TAKKARRAY_MAPPING]
 	    
-            raw_pub.publish(self.pressure, self.temp)
+            raw_pub.publish(header, self.pressure, self.temp)
 
             calibrated = np.array(self.pressure) + self.calibration
             for j in range(len(self.alive)):
                 contact[j] = abs(calibrated[j]) > contact_threshold
 
-            calibrated_pub.publish(calibrated)
-            contact_pub.publish(contact)
+            calibrated_pub.publish(header, calibrated)
+            contact_pub.publish(header, contact)
             # print "published Pressure ->", self.pressure
             r.sleep()
             
