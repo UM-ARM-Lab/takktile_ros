@@ -1,24 +1,75 @@
-import argparse
+#!/usr/bin/env python
+import numpy
 import rospy
-import yaml
-from std_srvs.srv import Trigger, TriggerResponse
-from visualization_msgs.msg import MarkerArray
-from takktile_ros.msg import Raw
 
-def tare_callback(request):
-    return TriggerResponse(success=False, message='Not implemented.')
 
-def takktile_callback(takktile_msg):
-    if len(takktile_msg.pressure) != len(groups_data):
-        rospy.logwarn(
-            'takktile_ros/Raw message contains %d pressure values, but there'
-            ' there are groups defined for %d values.',
-            len(takktile_msg.pressure), len(groups_data))
-        return
+class TakktileSubscriber(object):
+    def __init__(self, input_topic, tare_topic, callback, count=100):
+        from collections import deque
+        from threading import Condition, Lock
 
-    pass
+        self.lock = Lock()
+        self.condition = Condition(self.lock)
+
+        self.input_topic = input_topic
+        self.tare_topic = tare_topic
+
+        self.callback = callback
+        self.queue = deque(maxlen=count)
+        self.tare_offset = None
+
+    def __enter__(self):
+        from std_srvs.srv import Trigger
+        from takktile_ros.msg import Raw
+
+        self.takktile_sub = rospy.Subscriber(
+            self.input_topic, Raw, self.data_callback)
+        self.tare_srv = rospy.Service(
+            self.tare_topic, Trigger, self.tare_callback)
+
+    def __exit__(self, type, value, traceback):
+        self.takktile_sub.unregister()
+        self.tare_srv.shutdown()
+
+    def data_callback(self, takktile_msg):
+        with self.lock:
+            # Accumulate a buffer of data to use for tareing.
+            self.queue.append(takktile_msg)
+            self.condition.notify_all()
+
+            # Apply the tare offset.
+            if self.tare_offset is not None:
+                pressure_raw = numpy.array(takktile_msg.pressure)
+                pressure_tared = pressure_raw - self.tare_offset
+            else:
+                pressure_tared = None
+
+        if pressure_tared is not None:
+            self.callback(takktile_msg, pressure_tared)
+
+    def tare_callback(self, request):
+        from std_srvs.srv import TriggerResponse
+
+        with self.lock:
+            # Wait for the queue to fill up.
+            while len(self.queue) < self.queue.maxlen:
+                self.condition.wait()
+
+            # Compute the tare offset.
+            pressures = numpy.array(
+                [msg.pressure for msg in self.queue], dtype='float')
+            self.tare_offset = numpy.mean(pressures, axis=0)
+
+        return TriggerResponse(success=True, message='Tare complete.')
+
+def callback(takktile_msg, pressure):
+    print pressure
 
 def main():
+    import argparse
+    import yaml
+    from visualization_msgs.msg import MarkerArray
+
     global sensor_data, groups_data, marker_pub
 
     arg_parser = argparse.ArgumentParser()
@@ -37,8 +88,9 @@ def main():
     rospy.init_node('taktile_binary')
         
     marker_pub = rospy.Publisher('takktile/markers', MarkerArray, queue_size=1)
-    takktile_sub = rospy.Subscriber('takktile/raw', Raw, takktile_callback)
-    tare_srv = rospy.Service('takktile/tare', Trigger, tare_callback)
+
+    with TakktileSubscriber('takktile/raw', 'takktile/tare', callback):
+        rospy.spin()
 
     rospy.spin()
 
