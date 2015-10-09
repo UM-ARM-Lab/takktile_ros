@@ -96,7 +96,7 @@ class TakktileBinarizer(object):
         self.all_groups = set(groups)
         self.callback = callback
 
-    def binarize(self, takktile_msg, pressure_tared):
+    def __call__(self, takktile_msg, pressure_tared):
         if len(self.group_map) != len(pressure_tared):
             rospy.logwarn(
                 'Received unexpected number of pressure values: expected %d,'
@@ -107,21 +107,48 @@ class TakktileBinarizer(object):
         active_groups = set(
             group for group, is_active in zip(self.group_map, pressure_mask)
             if is_active)
-        print active_groups
         output = { group: group in active_groups for group in self.all_groups }
 
         return self.callback(takktile_msg, output)
 
-def callback(takktile_msg, pressure):
-    #print pressure
-    pass
+
+class TakktileBinaryPublisher(object):
+    def __init__(self, topic_name, queue_size=1):
+        self.topic_name = topic_name
+        self.queue_size = queue_size
+        self.binary_pub = None
+
+    def __enter__(self):
+        from sensor_msgs.msg import JointState
+
+        self.binary_pub = rospy.Publisher(
+            self.topic_name, JointState, queue_size=self.queue_size)
+
+    def __exit__(self, type, value, traceback):
+        self.binary_pub.unregister()
+        self.binary_pub = None
+
+    def __call__(self, takktile_msg, sensor_map):
+        from sensor_msgs.msg import JointState
+
+        # FIXME: This is a potential race condition.
+        if self.binary_pub is None:
+            return
+
+        output_msg = JointState()
+        # TODO: This should actaully use the timestamp from the Takktile
+        # message. However, the message currently has no header.
+        output_msg.header.stamp = rospy.Time.now()
+        output_msg.name = sensor_map.keys()
+        output_msg.effort = [float(value) for value in sensor_map.itervalues()]
+
+        self.binary_pub.publish(output_msg)
+
 
 def main():
     import argparse
     import yaml
     from visualization_msgs.msg import MarkerArray
-
-    global sensor_data, groups_data, marker_pub
 
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('sensor_file', type=str,
@@ -137,14 +164,27 @@ def main():
         groups_data = yaml.safe_load(groups_file)
 
     rospy.init_node('taktile_binary')
-        
-    marker_pub = rospy.Publisher('takktile/markers', MarkerArray, queue_size=1)
 
-    thresholder = TakktileBinarizer(groups_data, callback)
-    sensor_sub = TakktileSubscriber(
-        'takktile/raw', 'takktile/tare', thresholder.binarize)
+    #marker_pub = rospy.Publisher('takktile/markers', MarkerArray, queue_size=1)
+    active_prev = set()
 
-    with sensor_sub:
+    def do_output(takktile_msg, sensor_map):
+        binary_publisher(takktile_msg, sensor_map)
+
+        active_curr = set(
+            name for name, is_active in sensor_map.iteritems() if is_active)
+
+        if active_curr != active_prev:
+            rospy.loginfo('State changed: %s', ', '.join(sorted(active_curr)))
+
+        active_prev.clear()
+        active_prev.update(active_curr)
+
+    binary_publisher = TakktileBinaryPublisher('takktile/groups')
+    sensor_sub = TakktileSubscriber('takktile/raw', 'takktile/tare',
+        TakktileBinarizer(groups_data, do_output))
+
+    with binary_publisher, sensor_sub:
         sensor_sub.tare()
         rospy.spin()
 
