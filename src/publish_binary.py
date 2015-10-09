@@ -151,14 +151,11 @@ def main():
     from visualization_msgs.msg import MarkerArray
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('sensor_file', type=str,
-        help='path to YAML description of sensor locations')
+    arg_parser.add_argument('--no-auto-tare', action='store_true',
+        help='wait for an explicit tare service call before publishing')
     arg_parser.add_argument('groups_file', type=str,
         help='path to YAML description of sensor groups')
     args = arg_parser.parse_args() 
-
-    with open(args.sensor_file, 'r') as sensor_file:
-        sensor_data = yaml.safe_load(sensor_file)
 
     with open(args.groups_file, 'r') as groups_file:
         groups_data = yaml.safe_load(groups_file)
@@ -185,7 +182,9 @@ def main():
         TakktileBinarizer(groups_data, do_output))
 
     with binary_publisher, sensor_sub:
-        sensor_sub.tare()
+        if not args.no_auto_tare:
+            sensor_sub.tare()
+
         rospy.spin()
 
     rospy.spin()
