@@ -12,8 +12,8 @@
     <buildtool_depend>catkin</buildtool_depend>
     <build_depend>message_generation</build_depend>
     <run_depend>python</run_depend>
-    <run_depend>numpy</run_depend>
-    <run_depend>pyyaml</run_depend>
+    <run_depend>python-numpy</run_depend>
+    <run_depend>python-yaml</run_depend>
     <run_depend>TakkTile-usb</run_depend>
     <run_depend>rospy</run_depend>
     <run_depend>std_msgs</run_depend>
