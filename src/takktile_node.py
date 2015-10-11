@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 ########################################################################
-# 
+#
 # Publishes raw and calibrated sensor data for the takktile sensor
 #
 # dynamic information is published at 60Hz
 #   /takktile/calibrated
 #        zeroed pressure readings from active sensors (to add: thermal compensation)
-#    /takktile/contact 
-#        are sensors within pressure threshold of resting value (threshold specified 
+#    /takktile/contact
+#        are sensors within pressure threshold of resting value (threshold specified
 #                in launch or config file)
 #   /takktile/raw
 #        raw pressure
@@ -21,11 +21,11 @@
 #       xyz
 #            coordinates of present sensors (in message index)
 #            in meters per ROS conventions, relative to origin at center of bottom edge of board
-#            ID -> coodinate map is read from config file, modify to account for sensors that have 
+#            ID -> coodinate map is read from config file, modify to account for sensors that have
 #                been snapped apart
 #       calibration
 #            calibration coefficients (not yet implemented)
-# 
+#
 # a service is also started that allows dynamic rezeroing of sensors to compensate for thermal drift
 #
 # the size of sensor message depends on size of array (length is the number of sensors that respond)
@@ -62,7 +62,7 @@ TAKKARRAY_MAPPING = np.array([15, 16, 17, 18, 19, 25, 26, 27, 28, 29, 5, 6, 7, 8
 class TakkNode:
     def __init__(self, xyz_map, frame_id, temp_lowpass, contact_threshold):
         topic = 'takktile'
-        
+
         # Set up node & topics
         rospy.init_node(topic, anonymous=True)
         rospy.loginfo(rospy.get_name()+" node initialized")
@@ -96,9 +96,9 @@ class TakkNode:
         self.calibration = np.zeros(num_alive) # start with zero-order calibration
         # start rospy service for zeroing sensors
         rospy.Service(topic + '/zero', Empty, self.zero_callback)
-        
+
         # publish sensor data at 60 Hz
-        r = rospy.Rate(60) 
+        r = rospy.Rate(60)
 
         for tk in tks:
                 tk.startSampling()
@@ -163,7 +163,7 @@ class TakkNode:
             # check if this is TakkArray, if yes, then remap the data
             if (TAKKARRAY_FLAG):
                 self.pressure= [self.pressure[i] for i in TAKKARRAY_MAPPING]
-            
+
             raw_pub.publish(header, self.pressure, self.temp)
 
             calibrated = np.array(self.pressure) + self.calibration
@@ -174,7 +174,7 @@ class TakkNode:
             contact_pub.publish(header, contact)
             # print "published Pressure ->", self.pressure
             r.sleep()
-            
+
         # switch things off
         print "switching off"
         for tk in tks:
@@ -193,7 +193,7 @@ def takktile_zero():
     try:
          zero = rospy.ServiceProxy('/takktile/zero', Empty)
          zero()
-         return 
+         return
     except rospy.ServiceException, e:
          print "Service call failed: %s"%e
 
@@ -211,14 +211,13 @@ def get_param(param_name, config, default):
         return rospy.get_param(param_name)
     except:
         if config.has_key(param_name):
-            return config[param_name]    
+            return config[param_name]
 
 if __name__ == '__main__':
         #   temp lowpass
         #   contact thresh
         #   frame_id
         #   xyz mapping
-        
         config_file = rospy.get_param('config_file', 'takktile.yaml')
         config = load_config(config_file)
 
@@ -229,7 +228,7 @@ if __name__ == '__main__':
 
         print 'contact threshold:', CONTACT_THRESHOLD
         print 'temp lowpass:', TEMPERATURE_LOWPASS
-        
+
         for i in range(40):
                 XYZ_MAP += [Point32(config[i][0], config[i][1], config[i][2])]
 
