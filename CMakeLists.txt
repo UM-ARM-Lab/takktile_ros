@@ -22,6 +22,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 add_message_files(
     FILES
+    Alive.msg
     Contact.msg
     Info.msg
     Raw.msg
