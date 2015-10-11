@@ -51,7 +51,7 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import Point32
 from takktile_ros.msg import Raw, Touch, Contact, Info, Alive
 
-from TakkTile import TakkTile
+from TakkTile.TakkTile import TakkTile
 from yaml import safe_load
 
 # replace with 1 if the product is TakkArray
