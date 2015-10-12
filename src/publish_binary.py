@@ -136,9 +136,7 @@ class TakktileBinaryPublisher(object):
             return
 
         output_msg = JointState()
-        # TODO: This should actaully use the timestamp from the Takktile
-        # message. However, the message currently has no header.
-        output_msg.header.stamp = rospy.Time.now()
+        output_msg.header.stamp = takktile_msg.header.stamp
         output_msg.name = sensor_map.keys()
         output_msg.effort = [float(value) for value in sensor_map.itervalues()]
 
