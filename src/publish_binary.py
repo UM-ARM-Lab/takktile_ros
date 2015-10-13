@@ -90,7 +90,7 @@ class TakktileSubscriber(object):
 
 
 class TakktileBinarizer(object):
-    def __init__(self, groups, callback, threshold=3.):
+    def __init__(self, groups, callback, threshold=4.):
         self.group_map = list(groups)
         self.threshold = float(threshold)
         self.all_groups = set(groups)
