@@ -23,7 +23,7 @@ or add it to the bashrc
 
 4) Compile
 
-> rosmake takktile_ros
+> catkin_make (or catkin build)
 
 5) set USB permissions
 
