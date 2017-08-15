@@ -9,7 +9,7 @@ This will install TakkTile.py which is a dependency (currently included as a sym
 
 2) Get code
 
-> git clone --recursive https://github.com/personalrobotics/takktile_ros.git
+> git clone https://github.com/UM-ARM-Lab/takktile_ros.git
 
 3) Add the package path to the ROS_PACKAGE_PATH
 
