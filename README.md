@@ -5,37 +5,33 @@ ros drivers for the TakkTile tactile array
 
 1.) Install TakkTile TakkFast USB drivers (see https://github.com/TakkTile/TakkTile-usb)
 
+Follow instructions at [http://www.takktile.com/tutorial:takkfast]
+
 This will install TakkTile.py which is a dependency (currently included as a symlink -- need to fix this)
+
+
 
 2) Get code
 
 > git clone https://github.com/UM-ARM-Lab/takktile_ros.git
 
-3) Add the package path to the ROS_PACKAGE_PATH
+Change the symlink:
 
-> export ROS_PACKAGE_PATH=$ROS_PACKAGE_PATH:/path/to/this/directory
+    cd ~/catkin_ws/src/takktile_ros/src
+    ln -sf [PATH TO TakkTile.py] TakkTile.py
 
-or add it to the bashrc
+3) Compile
 
-> echo "ROS_PACKAGE_PATH=\$ROS_PACKAGE_PATH:/path/to/this/directory" >> ~/.bashrc
+`catkin_make (or catkin build)`
 
-> source ~/.bashrc
+4) set USB permissions
 
-4) Compile
+`sudo cp 71-takktile.rules /etc/udev/rules.d/`
 
-> catkin_make (or catkin build)
+5) Run
 
-5) set USB permissions
+`rosrun takktile_ros takktile_node.py`
 
-> sudo cp 71-takktile.rules /etc/udev/rules.d/
+6) Plot (in another terminal while takktile_node.py is running)
 
-6) Run
-> rosrun takktile_ros takktile_node.py
-
-7) Plot (in another terminal while takktile_node.py is running)
-
-ROS Fuerte and earlier releases:
-> rxplot /takktile/calibrated/pressure[0]:pressure[1]:pressure[2]:pressure[3]:pressure[4]
-
-ROS Fuerte and later releases:
-> rqt_plot /takktile/calibrated/pressure[0]:pressure[1]:pressure[2]:pressure[3]:pressure[4]
+`rqt_plot /takktile/calibrated/pressure[0]:pressure[1]:pressure[2]:pressure[3]:pressure[4]`
