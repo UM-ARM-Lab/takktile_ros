@@ -73,25 +73,25 @@ class TakkNode:
         calibrated_pub = rospy.Publisher(topic + '/calibrated',   Touch, queue_size=1)
         contact_pub    = rospy.Publisher(topic + '/contact', Contact, queue_size=1)
 
-        # slow topic
+        # slow topicg
         info_pub = rospy.Publisher(topic + '/sensor_info', Info, queue_size=1)
 
         # initialize connection to TakkTile
         tks = []
         tks.append(TakkTile())
 
-	print "Number of boards found = ", len(tks[0].UIDs)
-	print "UIDs ", tks[0].UIDs
+        print "Number of boards found = ", len(tks[0].UIDs)
+        print "UIDs ", tks[0].UIDs
 
         # check if there are multiple interfaces that are connected
-	if len(tks[0].UIDs)>1:
-		for i in range(1, len(tks[0].UIDs)):
-			tks.append(TakkTile(i)) # start a new instance for each board
+        if len(tks[0].UIDs)>1:
+            for i in range(1, len(tks[0].UIDs)):
+                tks.append(TakkTile(i)) # start a new instance for each board
 
         # get static map of populated live sensors
-	self.alive=[]
-	for tk in tks:
-		self.alive.append(tk.getAlive())
+        self.alive=[]
+        for tk in tks:
+            self.alive.append(tk.getAlive())
 
         num_alive = len(self.alive)
         self.calibration = np.zeros(num_alive) # start with zero-order calibration
@@ -101,21 +101,21 @@ class TakkNode:
         # publish sensor data at 60 Hz
         r = rospy.Rate(60) 
 
-	for tk in tks:
-		tk.startSampling()
+        for tk in tks:
+            tk.startSampling()
 
-	# initialize temperature lowpass with actual data
+        # initialize temperature lowpass with actual data
         data = {}
-	for tk in tks:
-		data.update(tk.getDataRaw()) # read data from all the connected boards
+        for tk in tks:
+            data.update(tk.getDataRaw()) # read data from all the connected boards
 
-	# unpack the values
-	# first - extract the values from the dictionary
-	# second - unzip
-	[self.pressure, self.temp] = zip(*data.values())
+        # unpack the values
+        # first - extract the values from the dictionary
+        # second - unzip
+        [self.pressure, self.temp] = zip(*data.values())
         self.pressure = np.array(self.pressure)
         self.temp = np.array(self.temp)
-	self.calibration = -np.array(self.pressure) # zero values at startup
+        self.calibration = -np.array(self.pressure) # zero values at startup
 
         i = 0
         #k = 0
@@ -131,28 +131,28 @@ class TakkNode:
             calibrated = [0.0] * num_alive
             contact = [False] * num_alive
 
-	    data = {}
-	    for tk in tks:
-		data.update(tk.getDataRaw())  # read data from all the connected boards
+            data = {}
+            for tk in tks:
+                data.update(tk.getDataRaw())  # read data from all the connected boards
 
-	    # unpack the values
-	    # first - extract the values from the dictionary
-	    # second - unzip
+            # unpack the values
+            # first - extract the values from the dictionary
+            # second - unzip
 
-	    #	    print "type(data.values()) ->", type(data.values())
-	    #	    dataValues=data.values()
-	    #	    print "zip(*dataValues) ->", zip(*dataValues)
+            #       print "type(data.values()) ->", type(data.values())
+            #       dataValues=data.values()
+            #       print "zip(*dataValues) ->", zip(*dataValues)
 
-	    [self.pressure, temp_new] = zip(*data.values())
+            [self.pressure, temp_new] = zip(*data.values())
 
             #print self.pressure
             # lowpass filter temperature
             self.temp = TEMPERATURE_LOWPASS * np.array(temp_new) + (1 - TEMPERATURE_LOWPASS) * self.temp
 
-	    # check if this is TakkArray, if yes, then remap the data
+            # check if this is TakkArray, if yes, then remap the data
             if (TAKKARRAY_FLAG):
                 self.pressure= [self.pressure[i] for i in TAKKARRAY_MAPPING]
-	    
+            
             raw_pub.publish(self.pressure, self.temp)
 
             calibrated = np.array(self.pressure) + self.calibration
@@ -164,10 +164,10 @@ class TakkNode:
             # print "published Pressure ->", self.pressure
             r.sleep()
             
-	# switch things off
-	print "switching off"
-	for tk in tks:
-		tk.stopSampling()
+        # switch things off
+        print "switching off"
+        for tk in tks:
+            tk.stopSampling()
 
     # start 'calibrate' service
     def zero_callback(self, msg):
@@ -180,11 +180,11 @@ def takktile_zero():
     # helper python interface to be used elsewhere
     rospy.wait_for_service('/takktile/zero')
     try:
-         zero = rospy.ServiceProxy('/takktile/zero', Empty)
-         zero()
-         return 
+        zero = rospy.ServiceProxy('/takktile/zero', Empty)
+        zero()
+        return 
     except rospy.ServiceException, e:
-         print "Service call failed: %s"%e
+        print "Service call failed: %s"%e
 
 
 # helper functions for loading configurations
@@ -203,23 +203,24 @@ def get_param(param_name, config, default):
             return config[param_name]    
 
 if __name__ == '__main__':
-	#   temp lowpass
-	#   contact thresh
-	#   frame_id
-	#   xyz mapping
-	
-	config_file = rospy.get_param('config_file', 'takktile.yaml')
-	config = load_config(config_file)
+        #   temp lowpass
+        #   contact thresh
+        #   frame_id
+        #   xyz mapping
+        
+    config_file = rospy.get_param('config_file', 'takktile.yaml')
+    config = load_config(config_file)
 
-	FRAME_ID = get_param('frame_id', config, 'unknown')
-	CONTACT_THRESHOLD = get_param('contact_threshold', config, 5)
-	TEMPERATURE_LOWPASS = get_param('temperature_lowpass', config, 0.001) # temp = lowpass * temp_new + (1 - lowpass) * temp_old
-	XYZ_MAP = []
+    FRAME_ID = get_param('frame_id', config, 'unknown')
+    CONTACT_THRESHOLD = get_param('contact_threshold', config, 5)
+    TEMPERATURE_LOWPASS = get_param('temperature_lowpass', config, 0.001) # temp = lowpass * temp_new + (1 - lowpass) * temp_old
+    XYZ_MAP = []
 
-	print 'contact threshold:', CONTACT_THRESHOLD
-	print 'temp lowpass:', TEMPERATURE_LOWPASS
-	
-	for i in range(40):
-		XYZ_MAP += [Point32(config[i][0], config[i][1], config[i][2])]
+    print 'contact threshold:', CONTACT_THRESHOLD
+    print 'temp lowpass:', TEMPERATURE_LOWPASS
+        
+    for i in range(40):
+        XYZ_MAP += [Point32(config[i][0], config[i][1], config[i][2])]
 
-	TakkNode(XYZ_MAP, FRAME_ID, TEMPERATURE_LOWPASS, CONTACT_THRESHOLD)
+    TakkNode(XYZ_MAP, FRAME_ID, TEMPERATURE_LOWPASS, CONTACT_THRESHOLD)
+        
