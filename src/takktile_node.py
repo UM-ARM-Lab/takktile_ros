@@ -62,6 +62,7 @@ TAKKARRAY_MAPPING = np.array([15, 16, 17, 18, 19, 25, 26, 27, 28, 29, 5, 6, 7, 8
 
 class TakkNode:
     def __init__(self, xyz_map, frame_id, temp_lowpass, contact_threshold):
+        self.tks = None
         topic = 'takktile'
         
         # Set up node & topics
@@ -88,6 +89,7 @@ class TakkNode:
             for i in range(1, len(tks[0].UIDs)):
                 tks.append(TakkTile(i)) # start a new instance for each board
 
+
         # get static map of populated live sensors
         self.alive=[]
         for tk in tks:
@@ -101,6 +103,8 @@ class TakkNode:
         # publish sensor data at 60 Hz
         r = rospy.Rate(60) 
 
+        self.tks = tks
+        rospy.on_shutdown(self.shutdown)
         for tk in tks:
             tk.startSampling()
 
@@ -164,10 +168,13 @@ class TakkNode:
             # print "published Pressure ->", self.pressure
             r.sleep()
             
+
+    def shutdown(self):
         # switch things off
         print "switching off"
-        for tk in tks:
+        for tk in self.tks:
             tk.stopSampling()
+        
 
     # start 'calibrate' service
     def zero_callback(self, msg):
