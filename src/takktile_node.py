@@ -133,7 +133,6 @@ class TakkNode:
 
             # publish sensor vals at 100 Hz
             calibrated = [0.0] * num_alive
-            contact = [False] * num_alive
 
             data = {}
             for tk in tks:
@@ -160,8 +159,8 @@ class TakkNode:
             raw_pub.publish(self.pressure, self.temp)
 
             calibrated = np.array(self.pressure) + self.calibration
-            for j in range(len(self.alive)):
-                contact[j] = abs(calibrated[j]) > contact_threshold
+
+            contact = [abs(cal) > contact_threshold for cal in calibrated]
 
             calibrated_pub.publish(calibrated)
             contact_pub.publish(contact)
